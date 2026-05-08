@@ -1,0 +1,13 @@
+.DS_Store
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+coverage.xml
+coverage_annotations/
+coverage_report.txt
+__pycache__/
+.venv/
+.coverage
+.vscode/
+.envrc

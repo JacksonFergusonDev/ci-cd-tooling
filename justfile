@@ -1,0 +1,54 @@
+set shell := ["bash", "-uc"]
+set unstable
+set quiet
+
+# --- ANSI Colors ---
+
+blue := '\033[1;34m'
+green := '\033[1;32m'
+yellow := '\033[1;33m'
+nc := '\033[0m'
+
+# Show available commands
+default:
+    @just --list
+
+# Auto-format Python code and Shell scripts
+format:
+    @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
+    uv run ruff check --fix .
+    uv run ruff format .
+    @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
+
+# Run all linters (Ruff, Markdown, Shellcheck)
+lint:
+    @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
+    uv run ruff check .
+    uv run ruff format --check .
+    if command -v markdownlint-cli2 >/dev/null 2>&1; then \
+        markdownlint-cli2 "**/*.md"; \
+    else \
+        printf "{{ yellow }}⚠ markdownlint-cli2 not found. Skipping.{{ nc }}\n"; \
+    fi
+    @printf "{{ green }}✔ Linting passed{{ nc }}\n"
+
+# Run static type checking with Mypy
+typecheck:
+    @printf "\n{{ blue }}=== Running Type Checks ==={{ nc }}\n"
+    uv run mypy .
+    @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
+
+# Run the exact pipeline executed by CI
+ci: lint typecheck
+    @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
+
+# Remove caches, artifacts, and temp files
+clean:
+    @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
+    rm -rf \
+        .pytest_cache \
+        .mypy_cache \
+        .ruff_cache \
+        .cache
+    find . -type d -name "__pycache__" -exec rm -rf {} +
+    @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"

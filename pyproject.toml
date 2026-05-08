@@ -1,0 +1,74 @@
+[project]
+name = "ci-cd-tooling"
+version = "0.1.0"
+description = "Centralized CI/CD infrastructure providing reusable GitHub Actions workflows and automated release tooling for Python packages and Homebrew taps."
+readme = "README.md"
+authors = [
+    { name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" },
+]
+requires-python = ">=3.13"
+dependencies = []
+license = {file = "LICENSE"}
+
+[dependency-groups]
+dev = [
+    "mypy>=2.0.0",
+    "pre-commit>=4.6.0",
+    "ruff>=0.15.12",
+]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- ruff ---- #
+
+[tool.ruff]
+target-version = "py313"
+extend-exclude = ["docs", "site"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D", "RUF", "N", "RET"]
+ignore = [
+    "E501",
+    "D100",
+    "D104",
+    "D107",
+    "T201",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = ["protostar"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["T201", "D"]
+
+# ---- mypy ---- #
+
+[tool.mypy]
+python_version = "3.13"
+pretty = true
+show_error_codes = true
+show_error_context = true
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+
+# ---- pytest ---- #
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+source = ["scripts"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
