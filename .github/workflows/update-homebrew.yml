@@ -43,7 +43,7 @@ jobs:
           python-version: "3.14"
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+        uses: Homebrew/actions/setup-homebrew@main
 
       - name: Tap the repository
         run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
