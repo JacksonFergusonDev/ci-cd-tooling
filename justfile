@@ -13,14 +13,14 @@ nc := '\033[0m'
 default:
     @just --list
 
-# Auto-format Python code and Shell scripts
+# Auto-format Python code
 format:
     @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
     uv run ruff check --fix .
     uv run ruff format .
     @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
 
-# Run all linters (Ruff, Markdown, Shellcheck)
+# Run all linters (Ruff and Markdown)
 lint:
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
     uv run ruff check .
@@ -38,8 +38,14 @@ typecheck:
     uv run mypy .
     @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
 
+# Run pytest
+test:
+    @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
+    uv run pytest
+    @printf "{{ green }}✔ All tests passed{{ nc }}\n"
+
 # Run the exact pipeline executed by CI
-ci: lint typecheck
+ci: lint typecheck test
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
