@@ -48,6 +48,9 @@ jobs:
       - name: Tap the repository
         run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
 
+      - name: Trust the tap
+        run: brew trust JacksonFergusonDev/tap
+
       - name: Update Formula
         run: |
           # The input variables replace your hardcoded values
