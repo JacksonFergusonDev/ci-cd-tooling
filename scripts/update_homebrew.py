@@ -10,6 +10,7 @@ from PyPI, and splices the formula using specified sentinels.
 import argparse
 import json
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -85,63 +86,61 @@ def main() -> None:
 
     # 3. Resolve the dependency tree via uv pip compile
     print("Resolving dependency tree...")
-    reqs_in = Path("reqs.in")
-    reqs_txt = Path("reqs.txt")
-    reqs_in.write_text(f"{args.package}=={args.version}", encoding="utf-8")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        reqs_in = tmp_path / "reqs.in"
+        reqs_txt = tmp_path / "reqs.txt"
+        reqs_in.write_text(f"{args.package}=={args.version}", encoding="utf-8")
 
-    run_cmd(
-        [
-            "uv",
-            "pip",
-            "compile",
-            "--no-annotate",
-            "--no-header",
-            str(reqs_in),
-            "-o",
-            str(reqs_txt),
-        ]
-    )
+        run_cmd(
+            [
+                "uv",
+                "pip",
+                "compile",
+                "--no-annotate",
+                "--no-header",
+                str(reqs_in),
+                "-o",
+                str(reqs_txt),
+            ]
+        )
 
-    # 4. Parse requirements and query PyPI directly
-    print("Resolving PyPI resource blocks...")
-    resource_blocks = []
+        # 4. Parse requirements and query PyPI directly
+        print("Resolving PyPI resource blocks...")
+        resource_blocks = []
 
-    with open(reqs_txt, encoding="utf-8") as f:
-        for line in f:
-            # Strip environment markers (e.g., ; python_version >= '3.9')
-            line = line.split(";")[0].strip()
+        with open(reqs_txt, encoding="utf-8") as f:
+            for line in f:
+                # Strip environment markers (e.g., ; python_version >= '3.9')
+                line = line.split(";")[0].strip()
 
-            if not line or line.startswith("#") or line.startswith("-"):
-                continue
-
-            if "==" in line:
-                pkg, version = line.split("==")
-                pkg = pkg.strip()
-                version = version.strip()
-
-                # Excise the root package to pass Homebrew audits
-                if pkg.lower() == args.package.lower():
+                if not line or line.startswith("#") or line.startswith("-"):
                     continue
 
-                print(f"  -> Fetching {pkg}=={version}")
-                sdist_url, sdist_sha = get_pypi_sdist(pkg, version)
+                if "==" in line:
+                    pkg, version = line.split("==")
+                    pkg = pkg.strip()
+                    version = version.strip()
 
-                block = (
-                    f'  resource "{pkg}" do\n'
-                    f'    url "{sdist_url}"\n'
-                    f'    sha256 "{sdist_sha}"\n'
-                    f"  end"
-                )
-                resource_blocks.append(block)
+                    # Excise the root package to pass Homebrew audits
+                    if pkg.lower() == args.package.lower():
+                        continue
 
-    resource_text = "\n\n".join(resource_blocks)
+                    print(f"  -> Fetching {pkg}=={version}")
+                    sdist_url, sdist_sha = get_pypi_sdist(pkg, version)
+
+                    block = (
+                        f'  resource "{pkg}" do\n'
+                        f'    url "{sdist_url}"\n'
+                        f'    sha256 "{sdist_sha}"\n'
+                        f"  end"
+                    )
+                    resource_blocks.append(block)
+
+        resource_text = "\n\n".join(resource_blocks)
 
     # 5. Splice File Content
     splice_formula(formula_path, new_url, new_sha, resource_text)
-
-    # Clean up ephemeral compilation files
-    reqs_in.unlink(missing_ok=True)
-    reqs_txt.unlink(missing_ok=True)
 
     print("Successfully synchronized formula.")
 
