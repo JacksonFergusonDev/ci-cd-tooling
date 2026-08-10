@@ -1,4 +1,4 @@
-set shell := ["bash", "-uc"]
+set shell := ["bash", "-euc", "-o", "pipefail"]
 set unstable
 set quiet
 
