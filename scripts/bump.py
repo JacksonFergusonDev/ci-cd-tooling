@@ -5,6 +5,7 @@
 # ]
 # ///
 
+import argparse
 import os
 import re
 import sys
@@ -50,11 +51,15 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
 
 def main() -> None:
     """Safely increments the SemVer project version in pyproject.toml."""
-    if len(sys.argv) < 2 or sys.argv[1] not in {"major", "minor", "patch"}:
-        print("Usage: bump.py [major|minor|patch]", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Safely increments the SemVer project version in pyproject.toml."
+    )
+    parser.add_argument(
+        "part", choices=["major", "minor", "patch"], help="The version part to bump"
+    )
+    args = parser.parse_args()
 
-    part = sys.argv[1]
+    part = args.part
     pyproject_path = Path("pyproject.toml")
 
     if not pyproject_path.exists():

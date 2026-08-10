@@ -62,9 +62,9 @@ def test_main_invalid_args(mocker, capsys) -> None:
     with pytest.raises(SystemExit) as e:
         bump.main()
 
-    assert e.value.code == 1
+    assert e.value.code == 2
     captured = capsys.readouterr()
-    assert "Usage: bump.py [major|minor|patch]" in captured.err
+    assert "usage: bump.py" in captured.err
 
 
 def test_main_missing_pyproject(

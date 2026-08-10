@@ -9,13 +9,14 @@ those resources into the formula using specified sentinels.
 
 import argparse
 import hashlib
-import json
 import re
-import subprocess
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+from .brew_utils import get_pypi_sdist, run_cmd, splice_formula
 
 
 def get_sha256(url: str) -> str:
@@ -23,39 +24,13 @@ def get_sha256(url: str) -> str:
     print(f"Fetching {url}...")
     req = urllib.request.Request(url)
     try:
-        with urllib.request.urlopen(req) as response:
-            return hashlib.sha256(response.read()).hexdigest()
+        with urllib.request.urlopen(req, timeout=15) as response:
+            hasher = hashlib.sha256()
+            for chunk in iter(lambda: response.read(4096), b""):
+                hasher.update(chunk)
+            return hasher.hexdigest()
     except urllib.error.URLError as e:
         sys.exit(f"Error fetching tarball: {e}")
-
-
-def get_pypi_sdist(package: str, version: str) -> tuple[str, str]:
-    """Queries PyPI for the sdist URL and SHA256 of a specific package version."""
-    url = f"https://pypi.org/pypi/{package}/{version}/json"
-    req = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as e:
-        sys.exit(f"Failed to fetch PyPI metadata for {package}=={version}: {e}")
-
-    for info in data.get("urls", []):
-        if info.get("packagetype") == "sdist":
-            return str(info["url"]), str(info["digests"]["sha256"])
-
-    sys.exit(f"No sdist found for {package}=={version} on PyPI.")
-
-
-def run_cmd(args: list[str], cwd: Path | None = None) -> str:
-    """Executes a shell command and returns its standard output."""
-    try:
-        res = subprocess.run(args, capture_output=True, text=True, check=True, cwd=cwd)
-        return res.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Command failed: {' '.join(args)}", file=sys.stderr)
-        print(f"Stdout: {e.stdout}", file=sys.stderr)
-        print(f"Stderr: {e.stderr}", file=sys.stderr)
-        raise
 
 
 def main() -> None:
@@ -85,77 +60,58 @@ def main() -> None:
 
     # 2. Export strict local dependencies
     print(f"Exporting local dependencies from {caller_dir}...")
-    reqs_file = caller_dir / "reqs.txt"
-    run_cmd(
-        [
-            "uv",
-            "export",
-            "--no-dev",
-            "--no-hashes",
-            "--format",
-            "requirements-txt",
-            "-o",
-            "reqs.txt",
-        ],
-        cwd=caller_dir,
-    )
 
-    # 3. Parse requirements and query PyPI directly (Bypassing poet entirely)
-    print("Resolving PyPI resource blocks...")
-    resource_blocks = []
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        reqs_file = tmp_path / "reqs.txt"
 
-    with open(reqs_file, encoding="utf-8") as f:
-        for line in f:
-            # Strip environment markers (e.g., ; python_version >= '3.9')
-            line = line.split(";")[0].strip()
+        run_cmd(
+            [
+                "uv",
+                "export",
+                "--no-dev",
+                "--no-hashes",
+                "--format",
+                "requirements-txt",
+                "-o",
+                str(reqs_file),
+            ],
+            cwd=caller_dir,
+        )
 
-            # Skip comments and flags
-            if not line or line.startswith("#") or line.startswith("-"):
-                continue
+        # 3. Parse requirements and query PyPI directly (Bypassing poet entirely)
+        print("Resolving PyPI resource blocks...")
+        resource_blocks = []
 
-            if "==" in line:
-                pkg, version = line.split("==")
-                pkg = pkg.strip()
-                version = version.strip()
+        with open(reqs_file, encoding="utf-8") as f:
+            for line in f:
+                # Strip environment markers (e.g., ; python_version >= '3.9')
+                line = line.split(";")[0].strip()
 
-                print(f"  -> Fetching {pkg}=={version}")
-                sdist_url, sdist_sha = get_pypi_sdist(pkg, version)
+                # Skip comments and flags
+                if not line or line.startswith("#") or line.startswith("-"):
+                    continue
 
-                block = (
-                    f'  resource "{pkg}" do\n'
-                    f'    url "{sdist_url}"\n'
-                    f'    sha256 "{sdist_sha}"\n'
-                    f"  end"
-                )
-                resource_blocks.append(block)
+                if "==" in line:
+                    pkg, version = line.split("==")
+                    pkg = re.sub(r"\[.*\]", "", pkg).strip()
+                    version = version.strip()
 
-    resource_text = "\n\n".join(resource_blocks)
+                    print(f"  -> Fetching {pkg}=={version}")
+                    sdist_url, sdist_sha = get_pypi_sdist(pkg, version)
+
+                    block = (
+                        f'  resource "{pkg}" do\n'
+                        f'    url "{sdist_url}"\n'
+                        f'    sha256 "{sdist_sha}"\n'
+                        f"  end"
+                    )
+                    resource_blocks.append(block)
+
+        resource_text = "\n\n".join(resource_blocks)
 
     # 4. Splice File Content
-    content = formula_path.read_text(encoding="utf-8")
-
-    # Update Root
-    content = re.sub(
-        r'^  url\s+".*"', f'  url "{tarball_url}"', content, flags=re.MULTILINE, count=1
-    )
-    content = re.sub(
-        r'^  sha256\s+".*"',
-        f'  sha256 "{new_sha}"',
-        content,
-        flags=re.MULTILINE,
-        count=1,
-    )
-
-    # Update Resources
-    pattern = r"(?<=# RESOURCE_BLOCK_START\n).*?(?=# RESOURCE_BLOCK_END)"
-    # Add trailing padding if there are resources, otherwise just padding
-    replacement = f"{resource_text}\n  " if resource_text else "  "
-    content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-
-    formula_path.write_text(content, encoding="utf-8")
-
-    # Clean up
-    reqs_file.unlink(missing_ok=True)
+    splice_formula(formula_path, tarball_url, new_sha, resource_text)
 
     print("Successfully synchronized formula.")
 
