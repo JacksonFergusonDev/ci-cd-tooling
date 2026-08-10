@@ -9,14 +9,14 @@ from PyPI, and splices the formula using specified sentinels.
 
 import argparse
 import json
-import re
-import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+from .brew_utils import get_pypi_sdist, run_cmd, splice_formula
 
 
 def get_pypi_metadata(
@@ -48,35 +48,6 @@ def extract_sdist_info(metadata: dict[str, Any]) -> tuple[str, str]:
             return str(url_info["url"]), str(url_info["digests"]["sha256"])
 
     raise ValueError("sdist information not found in PyPI metadata.")
-
-
-def get_pypi_sdist(package: str, version: str) -> tuple[str, str]:
-    """Queries PyPI for the sdist URL and SHA256 of a specific dependency."""
-    url = f"https://pypi.org/pypi/{package}/{version}/json"
-    req = urllib.request.Request(url)
-    try:
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except urllib.error.URLError as e:
-        sys.exit(f"Failed to fetch PyPI metadata for {package}=={version}: {e}")
-
-    for info in data.get("urls", []):
-        if info.get("packagetype") == "sdist":
-            return str(info["url"]), str(info["digests"]["sha256"])
-
-    sys.exit(f"No sdist found for {package}=={version} on PyPI.")
-
-
-def run_cmd(args: list[str], cwd: Path | None = None) -> str:
-    """Executes a shell command and returns its standard output."""
-    try:
-        res = subprocess.run(args, capture_output=True, text=True, check=True, cwd=cwd)
-        return res.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"Command failed: {' '.join(args)}", file=sys.stderr)
-        print(f"Stdout: {e.stdout}", file=sys.stderr)
-        print(f"Stderr: {e.stderr}", file=sys.stderr)
-        raise
 
 
 def main() -> None:
@@ -166,24 +137,7 @@ def main() -> None:
     resource_text = "\n\n".join(resource_blocks)
 
     # 5. Splice File Content
-    content = formula_path.read_text(encoding="utf-8")
-
-    content = re.sub(
-        r'^  url\s+".*"', f'  url "{new_url}"', content, flags=re.MULTILINE, count=1
-    )
-    content = re.sub(
-        r'^  sha256\s+".*"',
-        f'  sha256 "{new_sha}"',
-        content,
-        flags=re.MULTILINE,
-        count=1,
-    )
-
-    pattern = r"(?<=# RESOURCE_BLOCK_START\n).*?(?=# RESOURCE_BLOCK_END)"
-    replacement = f"{resource_text}\n  " if resource_text else "  "
-    content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-
-    formula_path.write_text(content, encoding="utf-8")
+    splice_formula(formula_path, new_url, new_sha, resource_text)
 
     # Clean up ephemeral compilation files
     reqs_in.unlink(missing_ok=True)
