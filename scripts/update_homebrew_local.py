@@ -9,6 +9,7 @@ those resources into the formula using specified sentinels.
 
 import argparse
 import hashlib
+import re
 import sys
 import tempfile
 import urllib.error
@@ -93,7 +94,7 @@ def main() -> None:
 
                 if "==" in line:
                     pkg, version = line.split("==")
-                    pkg = pkg.strip()
+                    pkg = re.sub(r"\[.*\]", "", pkg).strip()
                     version = version.strip()
 
                     print(f"  -> Fetching {pkg}=={version}")

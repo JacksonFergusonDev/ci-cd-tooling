@@ -9,6 +9,7 @@ from PyPI, and splices the formula using specified sentinels.
 
 import argparse
 import json
+import re
 import sys
 import tempfile
 import time
@@ -119,7 +120,7 @@ def main() -> None:
 
                 if "==" in line:
                     pkg, version = line.split("==")
-                    pkg = pkg.strip()
+                    pkg = re.sub(r"\[.*\]", "", pkg).strip()
                     version = version.strip()
 
                     # Excise the root package to pass Homebrew audits
