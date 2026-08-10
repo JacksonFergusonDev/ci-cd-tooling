@@ -1,6 +1,9 @@
 import hashlib
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from scripts import update_homebrew_local
 
@@ -88,3 +91,55 @@ def test_main_happy_path(mocker, tmp_path):
     )
 
     assert not (caller_dir / "reqs.txt").exists()
+
+
+def test_get_sha256_error(mocker):
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.side_effect = urllib.error.URLError("Not found")
+
+    with pytest.raises(SystemExit, match="Error fetching tarball"):
+        update_homebrew_local.get_sha256("https://fake-url.com")
+
+
+def test_main_missing_formula(mocker, tmp_path):
+    caller_dir = tmp_path / "caller"
+    caller_dir.mkdir()
+
+    mocker.patch(
+        "sys.argv",
+        [
+            "update_homebrew_local.py",
+            "--repo",
+            "JacksonFergusonDev/focal",
+            "--tag",
+            "v0.1.0",
+            "--formula",
+            str(tmp_path / "missing.rb"),
+            "--caller-dir",
+            str(caller_dir),
+        ],
+    )
+    with pytest.raises(SystemExit, match="Formula not found"):
+        update_homebrew_local.main()
+
+
+def test_main_missing_caller_dir(mocker, tmp_path):
+    formula_path = tmp_path / "formula.rb"
+    formula_path.touch()
+
+    mocker.patch(
+        "sys.argv",
+        [
+            "update_homebrew_local.py",
+            "--repo",
+            "JacksonFergusonDev/focal",
+            "--tag",
+            "v0.1.0",
+            "--formula",
+            str(formula_path),
+            "--caller-dir",
+            str(tmp_path / "missing"),
+        ],
+    )
+    with pytest.raises(SystemExit, match="Caller directory not found"):
+        update_homebrew_local.main()
