@@ -92,3 +92,49 @@ def test_main_missing_version_key(mock_pyproject: Path, mocker, capsys) -> None:
     assert e.value.code == 1
     captured = capsys.readouterr()
     assert "Error: Key [project.version] missing" in captured.err
+
+
+def test_atomic_write_text_error(tmp_path: Path, mocker) -> None:
+    target = tmp_path / "target.txt"
+    mocker.patch("os.replace", side_effect=OSError("Permission denied"))
+
+    with pytest.raises(OSError, match="Permission denied"):
+        bump.atomic_write_text(target, "content")
+
+
+def test_main_parse_error(mock_pyproject: Path, mocker, capsys) -> None:
+    mock_pyproject.write_text("invalid [ toml", encoding="utf-8")
+    mocker.patch("sys.argv", ["bump.py", "patch"])
+
+    with pytest.raises(SystemExit) as e:
+        bump.main()
+
+    assert e.value.code == 1
+    captured = capsys.readouterr()
+    assert "Error parsing pyproject.toml" in captured.err
+
+
+def test_main_invalid_semver(mock_pyproject: Path, mocker, capsys) -> None:
+    mock_pyproject.write_text(
+        '[project]\nname = "test-project"\nversion = "v1.2.3"\n', encoding="utf-8"
+    )
+    mocker.patch("sys.argv", ["bump.py", "patch"])
+
+    with pytest.raises(SystemExit) as e:
+        bump.main()
+
+    assert e.value.code == 1
+    captured = capsys.readouterr()
+    assert "is not valid SemVer" in captured.err
+
+
+def test_main_write_error(mock_pyproject: Path, mocker, capsys) -> None:
+    mocker.patch("sys.argv", ["bump.py", "patch"])
+    mocker.patch("scripts.bump.atomic_write_text", side_effect=OSError("Disk full"))
+
+    with pytest.raises(SystemExit) as e:
+        bump.main()
+
+    assert e.value.code == 1
+    captured = capsys.readouterr()
+    assert "Failed to write updated pyproject.toml: Disk full" in captured.err
