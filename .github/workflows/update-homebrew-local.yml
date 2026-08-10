@@ -46,11 +46,6 @@ jobs:
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@main
 
-      - name: Debug Workflow Content
-        run: |
-          echo "Current directory: $(pwd)"
-          cat .github/workflows/update-homebrew.yml
-
       - name: Tap the repository
         run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
 
