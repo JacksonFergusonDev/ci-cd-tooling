@@ -28,7 +28,7 @@ def get_pypi_metadata(
 
     for _ in range(max_retries):
         try:
-            with urllib.request.urlopen(url) as response:
+            with urllib.request.urlopen(url, timeout=15) as response:
                 if response.status == 200:
                     data = response.read().decode("utf-8")
                     return json.loads(data)  # type: ignore[no-any-return]

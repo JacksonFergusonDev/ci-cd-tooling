@@ -22,7 +22,7 @@ def get_sha256(url: str) -> str:
     print(f"Fetching {url}...")
     req = urllib.request.Request(url)
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             return hashlib.sha256(response.read()).hexdigest()
     except urllib.error.URLError as e:
         sys.exit(f"Error fetching tarball: {e}")

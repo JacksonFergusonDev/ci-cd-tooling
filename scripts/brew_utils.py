@@ -12,7 +12,7 @@ def get_pypi_sdist(package: str, version: str) -> tuple[str, str]:
     url = f"https://pypi.org/pypi/{package}/{version}/json"
     req = urllib.request.Request(url)
     try:
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=15) as response:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.URLError as e:
         sys.exit(f"Failed to fetch PyPI metadata for {package}=={version}: {e}")
