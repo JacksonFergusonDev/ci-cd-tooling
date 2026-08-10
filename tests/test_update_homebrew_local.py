@@ -1,5 +1,6 @@
 import hashlib
 import json
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from scripts import update_homebrew_local
@@ -10,7 +11,7 @@ def test_get_sha256(mocker):
     expected_hash = hashlib.sha256(mock_content).hexdigest()
 
     mock_response = MagicMock()
-    mock_response.read.return_value = mock_content
+    mock_response.read.side_effect = [mock_content, b""]
 
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -89,7 +90,8 @@ def test_main_happy_path(mocker, tmp_path):
 
     def mock_run_cmd(args, cwd=None):
         if "export" in args:
-            (caller_dir / "reqs.txt").write_text(
+            output_file = Path(args[args.index("-o") + 1])
+            output_file.write_text(
                 "markdownify==0.11.0 ; python_version >= '3.8'\nbeautifulsoup4==4.12.3",
                 encoding="utf-8",
             )
