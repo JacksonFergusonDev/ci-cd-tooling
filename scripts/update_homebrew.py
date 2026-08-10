@@ -18,7 +18,14 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from .brew_utils import get_pypi_sdist, run_cmd, splice_formula
+try:
+    from .brew_utils import get_pypi_sdist, run_cmd, splice_formula
+except ImportError:
+    from brew_utils import (  # type: ignore[import-not-found,no-redef]
+        get_pypi_sdist,
+        run_cmd,
+        splice_formula,
+    )
 
 
 def get_pypi_metadata(
