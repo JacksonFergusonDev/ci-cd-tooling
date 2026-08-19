@@ -25,12 +25,15 @@ Centralized infrastructure repository for reusable GitHub Actions workflows and 
 │   ├── update-homebrew.yml        # Reusable workflow for PyPI-published packages
 │   └── update-homebrew-local.yml  # Reusable workflow using caller repository manifests
 ├── scripts/
+│   ├── brew_utils.py              # Shared PyPI querying and Homebrew splicing logic
 │   ├── bump.py                    # Standalone SemVer version bumping tool
 │   ├── update_homebrew.py         # PyPI polling & Homebrew formula dependency splicing
 │   └── update_homebrew_local.py   # Manifest-based Homebrew formula dependency splicing
 └── tests/
+    ├── test_brew_utils.py         # Unit tests for shared Homebrew utilities
     ├── test_bump.py               # Unit tests for SemVer mutation logic
-    └── test_update_homebrew_local.py
+    ├── test_update_homebrew.py    # Unit tests for PyPI synchronization
+    └── test_update_homebrew_local.py # Unit tests for local manifest synchronization
 ```
 
 ---
