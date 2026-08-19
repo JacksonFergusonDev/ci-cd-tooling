@@ -1,0 +1,32 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":pinDigestsDisabled"
+    ],
+    "automerge": true,
+    "automergeType": "pr",
+    "platformAutomerge": true,
+    "rebaseWhen": "auto",
+    "packageRules": [
+        {
+            "matchManagers": [
+                "github-actions"
+            ],
+            "pinDigests": true
+        },
+        {
+            "matchDepTypes": [
+                "dev",
+                "dependency-groups"
+            ],
+            "groupName": "dev dependencies"
+        },
+        {
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "automerge": false
+        }
+    ]
+}
