@@ -10,19 +10,40 @@
     "rebaseWhen": "auto",
     "packageRules": [
         {
+            "description": "Pin digests for GitHub Actions",
             "matchManagers": [
                 "github-actions"
             ],
             "pinDigests": true
         },
         {
+            "description": "Group all non-major GitHub Action updates (digests, pins, patch, minor)",
+            "matchManagers": [
+                "github-actions"
+            ],
+            "matchUpdateTypes": [
+                "digest",
+                "pin",
+                "patch",
+                "minor",
+                "pinDigest"
+            ],
+            "groupName": "github-actions"
+        },
+        {
+            "description": "Group all non-major dev dependencies",
             "matchDepTypes": [
                 "dev",
                 "dependency-groups"
             ],
+            "matchUpdateTypes": [
+                "patch",
+                "minor"
+            ],
             "groupName": "dev dependencies"
         },
         {
+            "description": "Do not automerge major updates",
             "matchUpdateTypes": [
                 "major"
             ],
