@@ -56,6 +56,30 @@ def test_main_bump_logic(
     assert doc["project"]["version"] == expected_version
 
 
+@pytest.mark.parametrize(
+    ("part", "expected_version"),
+    [
+        ("major", "2.0.0"),
+        ("minor", "1.3.0"),
+        ("patch", "1.2.4"),
+    ],
+)
+def test_main_dry_run(
+    mock_pyproject: Path, mocker, capsys, part: str, expected_version: str
+) -> None:
+    original_content = mock_pyproject.read_text(encoding="utf-8")
+    mocker.patch("sys.argv", ["bump.py", "--dry-run", part])
+
+    bump.main()
+
+    # Check stdout outputs candidate version
+    captured = capsys.readouterr()
+    assert captured.out.strip() == expected_version
+
+    # Check TOML is untouched
+    assert mock_pyproject.read_text(encoding="utf-8") == original_content
+
+
 def test_main_invalid_args(mocker, capsys) -> None:
     mocker.patch("sys.argv", ["bump.py", "invalid"])
 

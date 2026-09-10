@@ -57,6 +57,11 @@ def main() -> None:
     parser.add_argument(
         "part", choices=["major", "minor", "patch"], help="The version part to bump"
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute and output the bumped version without modifying pyproject.toml.",
+    )
     args = parser.parse_args()
 
     part = args.part
@@ -107,6 +112,10 @@ def main() -> None:
         patch += 1
 
     new_version = f"{major}.{minor}.{patch}"
+
+    if args.dry_run:
+        print(new_version)
+        return
 
     # 4. Mutate node and write back atomically
     doc["project"]["version"] = new_version

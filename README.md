@@ -87,13 +87,17 @@ All scripts inside `scripts/` are standalone Python scripts featuring [PEP 723](
 
 ### Semantic Version Bumper (`scripts/bump.py`)
 
-Atomically updates the `[project.version]` string in a `pyproject.toml` file according to Semantic Versioning (`major`, `minor`, or `patch`).
+Atomically updates the `[project.version]` string in a `pyproject.toml` file according to Semantic Versioning (`major`, `minor`, or `patch`). Supports `--dry-run` to preview and calculate the target version without modifying any files.
 
 #### Remote Usage in `justfile` or Shell
 
 You can execute the script directly from GitHub's raw endpoint:
 
 ```bash
+# Preview the candidate version without writing
+uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py --dry-run patch
+
+# Atomically bump pyproject.toml and print the new version
 uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py patch
 ```
 
