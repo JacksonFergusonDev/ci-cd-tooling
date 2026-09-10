@@ -27,11 +27,13 @@ Centralized infrastructure repository for reusable GitHub Actions workflows and 
 ├── scripts/
 │   ├── brew_utils.py              # Shared PyPI querying and Homebrew splicing logic
 │   ├── bump.py                    # Standalone SemVer version bumping tool
+│   ├── release.py                 # Turnkey atomic release orchestrator
 │   ├── update_homebrew.py         # PyPI polling & Homebrew formula dependency splicing
 │   └── update_homebrew_local.py   # Manifest-based Homebrew formula dependency splicing
 └── tests/
     ├── test_brew_utils.py         # Unit tests for shared Homebrew utilities
     ├── test_bump.py               # Unit tests for SemVer mutation logic
+    ├── test_release.py            # Unit tests for release orchestration & rollback
     ├── test_update_homebrew.py    # Unit tests for PyPI synchronization
     └── test_update_homebrew_local.py # Unit tests for local manifest synchronization
 ```
@@ -110,4 +112,32 @@ bump part:
     git add pyproject.toml
     git commit -m "chore: bump version to $NEW_VERSION"
     git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+```
+
+### Atomic Release Orchestrator (`scripts/release.py`)
+
+A turnkey, atomic release orchestrator for uv-based Python projects. Executes a two-phase workflow:
+
+1. **Phase 1: Pre-Flight Checks (Read-Only)**
+   - Verifies tool prerequisites (`git`, `uv`).
+   - Ensures the active branch matches `--branch` (default: `main`).
+   - Rejects dirty working directories with uncommitted or untracked changes.
+   - Verifies synchronization with remote (`git fetch` and hash comparison).
+   - Validates `pyproject.toml` and SemVer structure.
+   - Checks for local and remote tag collisions (`git ls-remote`).
+   - Executes any optional `--pre-flight` commands.
+1. **Phase 2: Transactional Execution & Rollback**
+   - Updates `[project.version]` in `pyproject.toml`.
+   - Synchronizes `uv.lock` via `uv sync` and checks lock integrity (`uv lock --check`).
+   - Stages and creates release commit.
+   - Creates annotated tag.
+   - Atomically pushes branch and tag to remote (`git push origin HEAD --tags --atomic`).
+   - Automatically rolls back (deletes tag, runs `git reset --hard`) if any step fails or is aborted via `Ctrl+C`.
+
+#### Remote Usage in `justfile`
+
+```just
+# Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
+bump part: ci
+    uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/release.py {{ part }}
 ```
