@@ -26,13 +26,11 @@ Centralized infrastructure repository for reusable GitHub Actions workflows and 
 │   └── update-homebrew-local.yml  # Reusable workflow using caller repository manifests
 ├── scripts/
 │   ├── brew_utils.py              # Shared PyPI querying and Homebrew splicing logic
-│   ├── bump.py                    # Standalone SemVer version bumping tool
 │   ├── release.py                 # Turnkey atomic release orchestrator
 │   ├── update_homebrew.py         # PyPI polling & Homebrew formula dependency splicing
 │   └── update_homebrew_local.py   # Manifest-based Homebrew formula dependency splicing
 └── tests/
     ├── test_brew_utils.py         # Unit tests for shared Homebrew utilities
-    ├── test_bump.py               # Unit tests for SemVer mutation logic
     ├── test_release.py            # Unit tests for release orchestration & rollback
     ├── test_update_homebrew.py    # Unit tests for PyPI synchronization
     └── test_update_homebrew_local.py # Unit tests for local manifest synchronization
@@ -86,33 +84,6 @@ jobs:
 ## 📜 Automation Scripts & Remote Execution
 
 All scripts inside `scripts/` are standalone Python scripts featuring [PEP 723](https://peps.python.org/pep-0723/) inline metadata blocks. They can be executed directly via `uv run` without manually cloning this repository or installing dependencies locally.
-
-### Semantic Version Bumper (`scripts/bump.py`)
-
-Atomically updates the `[project.version]` string in a `pyproject.toml` file according to Semantic Versioning (`major`, `minor`, or `patch`). Supports `--dry-run` to preview and calculate the target version without modifying any files.
-
-#### Remote Usage in `justfile` or Shell
-
-You can execute the script directly from GitHub's raw endpoint:
-
-```bash
-# Preview the candidate version without writing
-uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py --dry-run patch
-
-# Atomically bump pyproject.toml and print the new version
-uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py patch
-```
-
-Example `justfile` integration:
-
-```bash
-bump part:
-    #!/usr/bin/env bash
-    NEW_VERSION=$(uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py {{ part }})
-    git add pyproject.toml
-    git commit -m "chore: bump version to $NEW_VERSION"
-    git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
-```
 
 ### Atomic Release Orchestrator (`scripts/release.py`)
 
