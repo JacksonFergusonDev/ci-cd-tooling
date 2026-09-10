@@ -33,19 +33,31 @@ SEMVER_RE = re.compile(
 )
 
 
+def get_clean_env() -> dict[str, str]:
+    """Return an environment stripped of uv's internal script virtualenv variables."""
+    env = os.environ.copy()
+    env.pop("VIRTUAL_ENV", None)
+    env.pop("PYTHONHOME", None)
+    return env
+
+
 def run_cmd(
     cmd: list[str],
     *,
     capture: bool = True,
     check: bool = True,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Execute a system command and return the completed process."""
+    if env is None:
+        env = get_clean_env()
     try:
         return subprocess.run(
             cmd,
             capture_output=capture,
             text=True,
             check=check,
+            env=env,
         )
     except subprocess.CalledProcessError as e:
         if capture:
@@ -236,7 +248,7 @@ def main(argv: list[str] | None = None) -> None:
     for cmd in args.pre_flight_cmds:
         print(f"=== Running pre-flight command: {cmd} ===")
         try:
-            subprocess.run(cmd, shell=True, check=True)
+            subprocess.run(cmd, shell=True, check=True, env=get_clean_env())
         except subprocess.CalledProcessError as e:
             print(
                 f"Error: Pre-flight command '{cmd}' failed with code {e.returncode}.",
